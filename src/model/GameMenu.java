@@ -32,12 +32,14 @@ public class GameMenu {
 
             if (choice == 1) playMatch();
             else if (choice == 2) viewLeaderboard();
+            else if (choice == 4) compareTwoPlayers();
             else if (choice == 5) searchPlayerHistory();
+            else if (choice == 6) listPlayersWithMoreThanXWins();
             else if (choice == 7) {
-                System.out.println("Exiting...");
+                System.out.println("Goodbye.");
                 return;
             } else {
-                System.out.println("Option not available yet. (Level 5+ later)");
+                System.out.println("Option not available yet. (Level 6+ later)");
             }
 
             System.out.println();
@@ -87,7 +89,7 @@ public class GameMenu {
 
     private void viewLeaderboard() {
         System.out.println();
-        System.out.println("=== Leaderboard (wins) ===");
+        System.out.println("Leaderboard:");
 
         MyArrayList<PlayerRecord> sorted = LeaderboardService.getSortedByWinsDesc(players);
 
@@ -99,10 +101,10 @@ public class GameMenu {
         for (int i = 0; i < sorted.size(); i++) {
             PlayerRecord pr = sorted.get(i);
             System.out.println((i + 1) + ". " + pr.getName()
-                    + " | wins=" + pr.getWins()
-                    + " | matches=" + pr.getMatchesPlayed());
+                    + " - Wins: " + pr.getWins());
         }
     }
+
 
     private void searchPlayerHistory() {
         System.out.println();
@@ -154,6 +156,72 @@ public class GameMenu {
         return sb.toString();
     }
 
+    private void compareTwoPlayers() {
+        System.out.println();
+        String nameA = readNonEmpty("Enter first player name: ");
+        String nameB = readNonEmpty("Enter second player name: ");
+
+        if (nameA.equalsIgnoreCase(nameB)) {
+            System.out.println("Please enter two different player names.");
+            return;
+        }
+
+        PlayerRecord a = players.get(nameA);
+        PlayerRecord b = players.get(nameB);
+
+        if (a == null || b == null) {
+            System.out.println("One or both players not found.");
+            return;
+        }
+
+        int aVsBMatches = 0;
+        int aVsBWins = 0;
+
+        MyArrayList<PlayerRecord.HistoryEntry> histA = a.getMatchHistory();
+        for (int i = 0; i < histA.size(); i++) {
+            PlayerRecord.HistoryEntry e = histA.get(i);
+            if (e.opponentName.equalsIgnoreCase(b.getName())) {
+                aVsBMatches++;
+                if (e.isWin) aVsBWins++;
+            }
+        }
+
+        int bVsAWins = aVsBMatches - aVsBWins;
+
+        double aWinPct = (aVsBMatches == 0) ? 0.0 : (aVsBWins * 100.0 / aVsBMatches);
+        double bWinPct = (aVsBMatches == 0) ? 0.0 : (bVsAWins * 100.0 / aVsBMatches);
+
+        System.out.println();
+        System.out.println("--- Head-to-Head ---");
+        System.out.println(a.getName() + " vs " + b.getName());
+        System.out.println("Matches played: " + aVsBMatches);
+        System.out.println(a.getName() + " wins: " + aVsBWins + " (" + formatPct(aWinPct) + ")");
+        System.out.println(b.getName() + " wins: " + bVsAWins + " (" + formatPct(bWinPct) + ")");
+    }
+
+    private void listPlayersWithMoreThanXWins() {
+        System.out.println();
+        int x = readInt("Enter win threshold x: ");
+
+        System.out.println();
+        System.out.println("Leaderboard (wins > " + x + "):");
+
+        MyArrayList<PlayerRecord> sorted = LeaderboardService.getSortedByWinsDesc(players);
+
+        int rank = 1;
+        for (int i = 0; i < sorted.size(); i++) {
+            PlayerRecord pr = sorted.get(i);
+            if (pr.getWins() > x) {
+                System.out.println(rank + ". " + pr.getName() + " - Wins: " + pr.getWins());
+                rank++;
+            }
+        }
+
+        if (rank == 1) {
+            System.out.println("No players found.");
+        }
+    }
+
     // ---------- input helpers ----------
 
     private int readInt(String prompt) {
@@ -166,6 +234,11 @@ public class GameMenu {
                 System.out.println("Invalid input. Please enter a whole number.");
             }
         }
+    }
+
+    private String formatPct(double pct) {
+        int rounded = (int) Math.round(pct);
+        return rounded + "%";
     }
 
     private String readNonEmpty(String prompt) {

@@ -23,7 +23,12 @@ public class PlayerRecord {
     public void recordMatch(MatchOutcome outcome, boolean isWinner) {
         matchesPlayed++;
         if (isWinner) wins++;
-        matchHistory.add(new HistoryEntry(outcome, isWinner));
+
+        String opp = outcome.player1.getName().equalsIgnoreCase(getName())
+                ? outcome.player2.getName()
+                : outcome.player1.getName();
+
+        matchHistory.add(new HistoryEntry(outcome, isWinner, opp));
     }
 
     public MyArrayList<HistoryEntry> getMatchHistory() {
@@ -33,10 +38,12 @@ public class PlayerRecord {
     public static class HistoryEntry {
         public final MatchOutcome outcome;
         public final boolean isWin;
+        public final String opponentName;
 
-        public HistoryEntry(MatchOutcome outcome, boolean isWin) {
+        public HistoryEntry(MatchOutcome outcome, boolean isWin, String opponentName) {
             this.outcome = outcome;
             this.isWin = isWin;
+            this.opponentName = opponentName;
         }
     }
 }
