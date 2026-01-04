@@ -32,6 +32,7 @@ public class GameMenu {
 
             if (choice == 1) playMatch();
             else if (choice == 2) viewLeaderboard();
+            else if (choice == 3) runSimulation();
             else if (choice == 4) compareTwoPlayers();
             else if (choice == 5) searchPlayerHistory();
             else if (choice == 6) listPlayersWithMoreThanXWins();
@@ -104,7 +105,6 @@ public class GameMenu {
                     + " - Wins: " + pr.getWins());
         }
     }
-
 
     private void searchPlayerHistory() {
         System.out.println();
@@ -221,6 +221,46 @@ public class GameMenu {
             System.out.println("No players found.");
         }
     }
+
+    private void runSimulation() {
+        System.out.println();
+        int x = readInt("Enter number of matches to simulate: ");
+
+        if (x <= 0) {
+            System.out.println("Please enter a positive number.");
+            return;
+        }
+
+        System.out.println("Running simulation...");
+
+        for (int i = 0; i < x; i++) {
+
+            String p1Name = "SimPlayer" + (1 + rng.nextInt(10));
+            String p2Name = "SimPlayer" + (1 + rng.nextInt(10));
+
+            while (p2Name.equalsIgnoreCase(p1Name)) {
+                p2Name = "SimPlayer" + (1 + rng.nextInt(10));
+            }
+
+            PlayerRecord pr1 = players.getOrCreate(p1Name);
+            PlayerRecord pr2 = players.getOrCreate(p2Name);
+
+            Player p1 = pr1.getPlayer();
+            Player p2 = pr2.getPlayer();
+
+            DeckLike deck = new Deck();
+            GuessProvider gp = new SimulationGuessProvider(rng);
+
+            MatchOutcome out = engine.playMatch(p1, p2, deck, gp, rng, null);
+
+            boolean p1Won = out.winner.getName().equals(p1.getName());
+            pr1.recordMatch(out, p1Won);
+            pr2.recordMatch(out, !p1Won);
+        }
+
+        System.out.println("Simulation complete.");
+    }
+
 
     // ---------- input helpers ----------
 
