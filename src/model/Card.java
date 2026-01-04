@@ -1,46 +1,49 @@
 package model;
 
 public class Card {
+    private final int rank; // 2-14
+    private final int suit; // 0-3
 
-    // Rank: 2–10 = number cards
-    // 11 = Jack, 12 = Queen, 13 = King, 14 = Ace
-    private int rank;
-
-    public Card(int rank) {
-        if (rank < 2 || rank > 14) {
-            throw new IllegalArgumentException("Card rank must be between 2 and 14");
-        }
+    // Used by Deck
+    public Card(int rank, int suit) {
         this.rank = rank;
+        this.suit = suit;
+    }
+
+    // Used by tests
+    public Card(int rank) {
+        this(rank, 0);
     }
 
     public int getRank() {
         return rank;
     }
 
-    /**
-     * Returns the base value of the card.
-     * Number cards (2–10): face value
-     * Face cards (11–13): 10
-     * Ace (14): 11 (base value, optimisation handled elsewhere)
-     */
     public int getBaseValue() {
-        if (rank >= 2 && rank <= 10) {
-            return rank;
-        } else if (rank >= 11 && rank <= 13) {
-            return 10;
-        } else { // Ace
-            return 11;
+        if (rank >= 2 && rank <= 10) return rank;
+        if (rank >= 11 && rank <= 13) return 10;
+        return 11; // Ace base
+    }
+
+    private String rankToString() {
+        if (rank >= 2 && rank <= 10) return String.valueOf(rank);
+        if (rank == 11) return "J";
+        if (rank == 12) return "Q";
+        if (rank == 13) return "K";
+        return "A";
+    }
+
+    private String suitToSymbol() {
+        switch (suit) {
+            case 0: return "♠";
+            case 1: return "♥";
+            case 2: return "♦";
+            default: return "♣";
         }
     }
 
     @Override
     public String toString() {
-        switch (rank) {
-            case 11: return "J";
-            case 12: return "Q";
-            case 13: return "K";
-            case 14: return "A";
-            default: return String.valueOf(rank);
-        }
+        return rankToString() + suitToSymbol();
     }
 }

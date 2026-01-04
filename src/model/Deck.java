@@ -2,7 +2,7 @@ package model;
 
 import java.util.Random;
 
-public class Deck {
+public class Deck implements DeckLike {
 
     private Card[] cards;
     private int nextIndex; // next card to deal (0..51)
@@ -12,15 +12,14 @@ public class Deck {
         nextIndex = 0;
     }
 
-    // Builds a standard 52-card deck (suits ignored; ranks only)
+    // Builds a standard 52-card deck
     private void buildDeck() {
         cards = new Card[52];
         int index = 0;
 
-        // For each rank 2..14, create 4 copies (one per suit conceptually)
-        for (int rank = 2; rank <= 14; rank++) {
-            for (int i = 0; i < 4; i++) {
-                cards[index] = new Card(rank);
+        for (int suit = 0; suit < 4; suit++) {
+            for (int rank = 2; rank <= 14; rank++) {
+                cards[index] = new Card(rank, suit);
                 index++;
             }
         }
@@ -34,10 +33,7 @@ public class Deck {
         return cards.length - nextIndex;
     }
 
-    /**
-     * Fisher–Yates shuffle (in-place).
-     * O(n) time, O(1) extra space.
-     */
+    // Shuffle
     public void shuffle(Random rng) {
         for (int i = cards.length - 1; i > 0; i--) {
             int j = rng.nextInt(i + 1); // 0..i
@@ -48,9 +44,7 @@ public class Deck {
         nextIndex = 0; // after shuffling, start dealing from the top
     }
 
-    /**
-     * Deals one card from the deck.
-     */
+    // Deals one card from the deck
     public Card deal() {
         if (nextIndex >= cards.length) {
             throw new IllegalStateException("No cards remaining in the deck");

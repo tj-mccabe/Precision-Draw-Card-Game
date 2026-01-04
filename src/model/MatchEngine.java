@@ -10,7 +10,8 @@ public class MatchEngine {
                                   Player p2,
                                   DeckLike deck,
                                   GuessProvider guessProvider,
-                                  Random rng) {
+                                  Random rng,
+                                  MatchObserver observer) {
 
         int target = 40;
 
@@ -36,22 +37,24 @@ public class MatchEngine {
             boolean p1StartsThisRound = (round % 2 == 1) ? p1StartsRound1 : !p1StartsRound1;
             p1StartsRound[round - 1] = p1StartsThisRound;
 
+            Player first = p1StartsThisRound ? p1 : p2;
+            if (observer != null) observer.onRoundStart(round, target, first);
+
+            // play in correct order
             if (p1StartsThisRound) {
-                TurnResult r1 = takeTurn(p1, round, target, deck, guessProvider);
-                TurnResult r2 = takeTurn(p2, round, target, deck, guessProvider);
+                TurnResult r1 = takeTurn(p1, round, target, deck, guessProvider, observer);
+                TurnResult r2 = takeTurn(p2, round, target, deck, guessProvider, observer);
 
                 p1Totals[round - 1] = r1.total;
                 p1Scores[round - 1] = r1.score;
-
                 p2Totals[round - 1] = r2.total;
                 p2Scores[round - 1] = r2.score;
             } else {
-                TurnResult r2 = takeTurn(p2, round, target, deck, guessProvider);
-                TurnResult r1 = takeTurn(p1, round, target, deck, guessProvider);
+                TurnResult r2 = takeTurn(p2, round, target, deck, guessProvider, observer);
+                TurnResult r1 = takeTurn(p1, round, target, deck, guessProvider, observer);
 
                 p1Totals[round - 1] = r1.total;
                 p1Scores[round - 1] = r1.score;
-
                 p2Totals[round - 1] = r2.total;
                 p2Scores[round - 1] = r2.score;
             }
@@ -59,20 +62,32 @@ public class MatchEngine {
             p1MatchScore += p1Scores[round - 1];
             p2MatchScore += p2Scores[round - 1];
 
-            // Target update rule for next round
+            // update target for next round
             boolean p1Under = p1Totals[round - 1] < target;
             boolean p2Under = p2Totals[round - 1] < target;
 
             boolean p1Over = p1Totals[round - 1] > target;
             boolean p2Over = p2Totals[round - 1] > target;
 
-            if (p1Under && p2Under) {
-                target += 5;
-            } else if (p1Over && p2Over) {
-                target -= 5;
+            int targetAfterThisRound = target;
+            if (p1Under && p2Under) targetAfterThisRound += 5;
+            else if (p1Over && p2Over) targetAfterThisRound -= 5;
+
+            targetAfter[round - 1] = targetAfterThisRound;
+
+            if (observer != null) {
+                observer.onRoundEnd(
+                        round,
+                        targetBefore[round - 1],
+                        targetAfterThisRound,
+                        p1Scores[round - 1],
+                        p2Scores[round - 1],
+                        p1MatchScore,
+                        p2MatchScore
+                );
             }
 
-            targetAfter[round - 1] = target;
+            target = targetAfterThisRound;
         }
 
         Player winner = (p1MatchScore <= p2MatchScore) ? p1 : p2;
@@ -92,21 +107,19 @@ public class MatchEngine {
                                 int round,
                                 int target,
                                 DeckLike deck,
-                                GuessProvider guessProvider) {
+                                GuessProvider guessProvider,
+                                MatchObserver observer) {
 
         int guess = guessProvider.getGuess(player, round, target);
-
-        if (guess < 1 || guess > 52) {
-            throw new IllegalArgumentException("Guess must be between 1 and 52");
-        }
+        if (guess < 1 || guess > 52) throw new IllegalArgumentException("Guess must be between 1 and 52");
 
         Card[] hand = new Card[guess];
-        for (int i = 0; i < guess; i++) {
-            hand[i] = deck.deal();
-        }
+        for (int i = 0; i < guess; i++) hand[i] = deck.deal();
 
         int total = HandScorer.calculateOptimisedTotal(hand, guess, target);
         int score = HandScorer.calculateScore(hand, guess, target);
+
+        if (observer != null) observer.onPlayerTurn(player, guess, hand, guess, total, score, target);
 
         return new TurnResult(total, score);
     }
