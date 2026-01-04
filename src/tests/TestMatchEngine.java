@@ -71,7 +71,7 @@ public class TestMatchEngine {
         rng = new Random(123);
 
         MatchEngine engine = new MatchEngine();
-        MatchOutcome out = engine.playMatch(p1, p2, deck, gp, rng);
+        MatchOutcome out = engine.playMatch(p1, p2, deck, gp, rng, null);
 
         // T15: exactly 4 rounds occur
         check("T15 exactly 4 rounds recorded", out.targetBeforeRound.length == 4 && out.p1Totals.length == 4);
