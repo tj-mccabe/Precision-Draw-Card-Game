@@ -30,6 +30,30 @@ public class ConsoleMatchObserver implements MatchObserver {
     }
 
     @Override
+    public void onSecondPlayerHint(Player secondPlayer,
+                                   Player firstPlayer,
+                                   int target,
+                                   int firstGuess,
+                                   int firstTotal,
+                                   int firstScore) {
+
+        int diff = target - firstTotal;
+
+        System.out.println("Hint for " + secondPlayer.getName() + ":");
+        System.out.println("  " + firstPlayer.getName() + " guessed " + firstGuess
+                + " and got total " + firstTotal + " (round score " + firstScore + ").");
+
+        if (diff > 0) {
+            System.out.println("  They undershot by " + diff + ". Consider being slightly more aggressive.");
+        } else if (diff < 0) {
+            System.out.println("  They overshot by " + (-diff) + ". Consider being slightly safer.");
+        } else {
+            System.out.println("  They hit the target exactly. Consider matching their risk level.");
+        }
+        System.out.println();
+    }
+
+    @Override
     public void onRoundEnd(int roundNumber, int targetBefore, int targetAfter,
                            int p1RoundScore, int p2RoundScore,
                            int p1MatchScoreSoFar, int p2MatchScoreSoFar) {
@@ -39,6 +63,10 @@ public class ConsoleMatchObserver implements MatchObserver {
         System.out.println("  Player 2 total: " + p2MatchScoreSoFar);
         System.out.println();
 
+        if (roundNumber == 4) {
+            return;
+        }
+
         if (targetAfter > targetBefore) {
             System.out.println("Both players undershot in round " + roundNumber + " - adjusting target");
         } else if (targetAfter < targetBefore) {
@@ -47,4 +75,12 @@ public class ConsoleMatchObserver implements MatchObserver {
             System.out.println("Mixed result in round " + roundNumber + " - target unchanged");
         }
     }
+
+    @Override
+    public void onRoundRestart(int roundNumber, String message) {
+        System.out.println(message);
+        System.out.println("Restarting round " + roundNumber + "...");
+        System.out.println();
+    }
+
 }

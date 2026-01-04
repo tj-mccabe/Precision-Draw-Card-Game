@@ -1,5 +1,6 @@
 package model;
 
+import java.sql.SQLOutput;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -28,7 +29,7 @@ public class GameMenu {
     public void run() {
         while (true) {
             printMenu();
-            int choice = readInt("Choose option: ");
+            int choice = readIntInRange("Choose option: ", 1, 7);
 
             if (choice == 1) playMatch();
             else if (choice == 2) viewLeaderboard();
@@ -36,11 +37,9 @@ public class GameMenu {
             else if (choice == 4) compareTwoPlayers();
             else if (choice == 5) searchPlayerHistory();
             else if (choice == 6) listPlayersWithMoreThanXWins();
-            else if (choice == 7) {
-                System.out.println("Goodbye.");
+            else {
+                System.out.println("Exiting...");
                 return;
-            } else {
-                System.out.println("Option not available yet. (Level 6+ later)");
             }
 
             System.out.println();
@@ -60,12 +59,12 @@ public class GameMenu {
 
     private void playMatch() {
         System.out.println();
-        String name1 = readNonEmpty("Enter Player 1 name: ");
-        String name2 = readNonEmpty("Enter Player 2 name: ");
+        String name1 = readValidName("Enter Player 1 name: ");
+        String name2 = readValidName("Enter Player 2 name: ");
 
         while (name2.equalsIgnoreCase(name1)) {
             System.out.println("Names must be unique. Enter a different Player 2 name.");
-            name2 = readNonEmpty("Enter Player 2 name: ");
+            name2 = readValidName("Enter Player 2 name: ");
         }
 
         PlayerRecord pr1 = players.getOrCreate(name1);
@@ -108,21 +107,20 @@ public class GameMenu {
 
     private void searchPlayerHistory() {
         System.out.println();
-        String name = readNonEmpty("Enter the player name to view history: ");
+        String name = readValidName("Enter the player name to view history: ");
         PlayerRecord pr = players.get(name);
 
         if (pr == null) {
             System.out.println("Player not found.");
             return;
         }
-
-        System.out.println("--- Match History ---");
+        System.out.println();
+        System.out.println("-------------------------- Match History --------------------------");
 
         MyArrayList<PlayerRecord.HistoryEntry> hist = pr.getMatchHistory();
         if (hist.size() == 0) {
             System.out.println("No match history recorded yet.");
             System.out.println();
-            System.out.println("Total Wins: " + pr.getWins());
             return;
         }
 
@@ -143,7 +141,7 @@ public class GameMenu {
         }
 
         System.out.println();
-        System.out.println("Total Wins: " + pr.getWins());
+        printAnalytics(pr);
     }
 
     private String formatArray(int[] arr) {
@@ -158,50 +156,82 @@ public class GameMenu {
 
     private void compareTwoPlayers() {
         System.out.println();
-        String nameA = readNonEmpty("Enter first player name: ");
-        String nameB = readNonEmpty("Enter second player name: ");
 
-        if (nameA.equalsIgnoreCase(nameB)) {
-            System.out.println("Please enter two different player names.");
-            return;
-        }
+        while (true) {
+            String nameA = readValidName("Enter first player name: ");
+            String nameB = readValidName("Enter second player name: ");
 
-        PlayerRecord a = players.get(nameA);
-        PlayerRecord b = players.get(nameB);
-
-        if (a == null || b == null) {
-            System.out.println("One or both players not found.");
-            return;
-        }
-
-        int aVsBMatches = 0;
-        int aVsBWins = 0;
-
-        MyArrayList<PlayerRecord.HistoryEntry> histA = a.getMatchHistory();
-        for (int i = 0; i < histA.size(); i++) {
-            PlayerRecord.HistoryEntry e = histA.get(i);
-            if (e.opponentName.equalsIgnoreCase(b.getName())) {
-                aVsBMatches++;
-                if (e.isWin) aVsBWins++;
+            while (nameA.equalsIgnoreCase(nameB)) {
+                System.out.println("Please enter two different player names.");
+                nameB = readValidName("Enter second player name: ");
             }
+
+            PlayerRecord a = players.get(nameA);
+            PlayerRecord b = players.get(nameB);
+
+            if (a == null || b == null) {
+                if (a == null && b == null) {
+                    System.out.println("Players not found: " + nameA + ", " + nameB);
+                } else if (a == null) {
+                    System.out.println("Player not found: " + nameA);
+                } else {
+                    System.out.println("Player not found: " + nameB);
+                }
+                System.out.println("Please try again.\n");
+                continue;
+            }
+
+            System.out.println();
+
+            // ===== Player Comparison (overall stats) =====
+            int aMatchesPlayed = a.getMatchesPlayed();
+            int bMatchesPlayed = b.getMatchesPlayed();
+
+            int aWins = a.getWins();
+            int bWins = b.getWins();
+
+            double aOverallPct = (aMatchesPlayed == 0) ? 0.0 : (aWins * 100.0 / aMatchesPlayed);
+            double bOverallPct = (bMatchesPlayed == 0) ? 0.0 : (bWins * 100.0 / bMatchesPlayed);
+
+            System.out.println("-------- Player Comparison --------");
+            System.out.println(String.format("%-12s %-12s %-8s %-8s", "Player", "Match Count", "Wins", "Wins%"));
+            System.out.println(String.format("%-12s %-12d %-8d %-8s", a.getName(), aMatchesPlayed, aWins, formatPct1dp(aOverallPct)));
+            System.out.println(String.format("%-12s %-12d %-8d %-8s", b.getName(), bMatchesPlayed, bWins, formatPct1dp(bOverallPct)));
+            System.out.println("-----------------------------------");
+            System.out.println();
+
+            // ===== Head-to-head =====
+            int aVsBMatches = 0;
+            int aVsBWins = 0;
+
+            MyArrayList<PlayerRecord.HistoryEntry> histA = a.getMatchHistory();
+            for (int i = 0; i < histA.size(); i++) {
+                PlayerRecord.HistoryEntry e = histA.get(i);
+                if (e.opponentName.equalsIgnoreCase(b.getName())) {
+                    aVsBMatches++;
+                    if (e.isWin) aVsBWins++;
+                }
+            }
+
+            int bVsAWins = aVsBMatches - aVsBWins;
+
+            double aWinPct = (aVsBMatches == 0) ? 0.0 : (aVsBWins * 100.0 / aVsBMatches);
+            double bWinPct = (aVsBMatches == 0) ? 0.0 : (bVsAWins * 100.0 / aVsBMatches);
+
+            System.out.println("--- Head-to-Head ---");
+            System.out.println(a.getName() + " vs " + b.getName());
+            System.out.println();
+            System.out.println("Matches played against each other: " + aVsBMatches);
+            System.out.println(a.getName() + " wins: " + aVsBWins + " (" + formatPct(aWinPct) + ")");
+            System.out.println(b.getName() + " wins: " + bVsAWins + " (" + formatPct(bWinPct) + ")");
+
+            return;
         }
-
-        int bVsAWins = aVsBMatches - aVsBWins;
-
-        double aWinPct = (aVsBMatches == 0) ? 0.0 : (aVsBWins * 100.0 / aVsBMatches);
-        double bWinPct = (aVsBMatches == 0) ? 0.0 : (bVsAWins * 100.0 / aVsBMatches);
-
-        System.out.println();
-        System.out.println("--- Head-to-Head ---");
-        System.out.println(a.getName() + " vs " + b.getName());
-        System.out.println("Matches played: " + aVsBMatches);
-        System.out.println(a.getName() + " wins: " + aVsBWins + " (" + formatPct(aWinPct) + ")");
-        System.out.println(b.getName() + " wins: " + bVsAWins + " (" + formatPct(bWinPct) + ")");
     }
 
     private void listPlayersWithMoreThanXWins() {
         System.out.println();
-        int x = readInt("Enter win threshold x: ");
+        int x = readNonNegativeInt("Enter win threshold x: ");
 
         System.out.println();
         System.out.println("Leaderboard (wins > " + x + "):");
@@ -224,12 +254,7 @@ public class GameMenu {
 
     private void runSimulation() {
         System.out.println();
-        int x = readInt("Enter number of matches to simulate: ");
-
-        if (x <= 0) {
-            System.out.println("Please enter a positive number.");
-            return;
-        }
+        int x = readIntInRange("Enter number of matches to simulate: ", 1, 5000);
 
         System.out.println("Running simulation...");
 
@@ -261,8 +286,98 @@ public class GameMenu {
         System.out.println("Simulation complete.");
     }
 
-
     // ---------- input helpers ----------
+
+    private void printAnalytics(PlayerRecord pr) {
+        MyArrayList<PlayerRecord.HistoryEntry> hist = pr.getMatchHistory();
+
+        int matches = hist.size();
+        int rounds = matches * 4;
+
+        int overshoots = 0;
+        int undershoots = 0;
+        int perfectHits = 0;
+
+        int sumGuesses = 0;
+        int sumTotals = 0;
+
+        int bestMatchScore = Integer.MAX_VALUE;
+        int worstMatchScore = Integer.MIN_VALUE;
+
+        for (int i = 0; i < hist.size(); i++) {
+            PlayerRecord.HistoryEntry entry = hist.get(i);
+            MatchOutcome out = entry.outcome;
+
+            boolean isP1 = out.player1.getName().equalsIgnoreCase(pr.getName());
+
+            int[] totals = isP1 ? out.p1Totals : out.p2Totals;
+            int[] scores = isP1 ? out.p1Scores : out.p2Scores;
+            int[] guesses = isP1 ? out.p1Guesses : out.p2Guesses;
+
+            int matchScore = isP1 ? out.p1MatchScore : out.p2MatchScore;
+
+            if (matchScore < bestMatchScore) bestMatchScore = matchScore;
+            if (matchScore > worstMatchScore) worstMatchScore = matchScore;
+
+            for (int r = 0; r < 4; r++) {
+                int target = out.targetBeforeRound[r];
+
+                sumTotals += totals[r];
+                sumGuesses += guesses[r];
+
+                if (totals[r] > target) overshoots++;
+                else if (totals[r] < target) undershoots++;
+
+                if (scores[r] == -5) perfectHits++;
+            }
+        }
+
+        int matchesPlayed = pr.getMatchesPlayed();
+        int wins = pr.getWins();
+
+        double winRate = (matchesPlayed == 0) ? 0.0 : (wins * 100.0 / matchesPlayed);
+        double overshootRate = (rounds == 0) ? 0.0 : (overshoots * 100.0 / rounds);
+        double undershootRate = (rounds == 0) ? 0.0 : (undershoots * 100.0 / rounds);
+        double avgGuesses = (rounds == 0) ? 0.0 : (sumGuesses * 1.0 / rounds);
+        double avgTotal = (rounds == 0) ? 0.0 : (sumTotals * 1.0 / rounds);
+
+        System.out.println("----- Analytics -----");
+        System.out.println("Matches played: " + matchesPlayed);
+        System.out.println("Wins: " + wins + " (" + formatPct1dp(winRate) + ")");
+        System.out.println("Overshoot rate: " + formatPct1dp(overshootRate));
+        System.out.println("Undershoot rate: " + formatPct1dp(undershootRate));
+        System.out.println("Perfect hits: " + perfectHits);
+        System.out.println("Average cards guessed: " + format1dp(avgGuesses));
+        System.out.println("Average round total: " + format1dp(avgTotal));
+
+        if (matches > 0) {
+            System.out.println("Best match score: " + bestMatchScore);
+            System.out.println("Worst match score: " + worstMatchScore);
+        }
+
+        System.out.println("---------------------");
+    }
+
+    private String format1dp(double v) {
+        double rounded = Math.round(v * 10.0) / 10.0;
+        return String.valueOf(rounded);
+    }
+
+    private String formatPct1dp(double pct) {
+        double rounded = Math.round(pct * 10.0) / 10.0;
+        return rounded + "%";
+    }
+
+    private int readNonNegativeInt(String prompt) {
+        while (true) {
+            int v = readInt(prompt);
+            if (v < 0) {
+                System.out.println("Please enter a positive number.");
+                continue;
+            }
+            return v;
+        }
+    }
 
     private int readInt(String prompt) {
         while (true) {
@@ -276,18 +391,55 @@ public class GameMenu {
         }
     }
 
+    private int readIntInRange(String prompt, int min, int max) {
+        while (true) {
+            int v = readInt(prompt);
+            if (v < min || v > max) {
+                System.out.println("Please enter a number between " + min + " and " + max + ".");
+                continue;
+            }
+            return v;
+        }
+    }
+
     private String formatPct(double pct) {
         int rounded = (int) Math.round(pct);
         return rounded + "%";
     }
 
-    private String readNonEmpty(String prompt) {
+    private String readValidName(String prompt) {
         while (true) {
             System.out.print(prompt);
             String s = sc.nextLine().trim();
-            if (!s.isEmpty()) return s;
-            System.out.println("Input cannot be empty.");
+
+            if (s.isEmpty()) {
+                System.out.println("Input cannot be empty.");
+                continue;
+            }
+
+            if (s.length() < 3 || s.length() > 15) {
+                System.out.println("Name must be between 3 and 15 characters.");
+                continue;
+            }
+
+            if (!isAlphaNumeric(s)) {
+                System.out.println("Name must contain only letters and numbers.");
+                continue;
+            }
+
+            return s;
         }
+    }
+
+    private boolean isAlphaNumeric(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            boolean ok = (c >= 'A' && c <= 'Z')
+                    || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9');
+            if (!ok) return false;
+        }
+        return true;
     }
 
     // ---------- demo helpers ----------

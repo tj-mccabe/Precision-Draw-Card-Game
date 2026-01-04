@@ -16,7 +16,7 @@ public class MyHashMapStringPlayer {
 
     private Entry[] table;
     private int size; // active (non-deleted) entries
-    private int used; // includes deleted slots (tombstones)
+    private int used; // includes deleted slots
 
     public MyHashMapStringPlayer() {
         table = new Entry[16];

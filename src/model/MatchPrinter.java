@@ -3,11 +3,9 @@ package model;
 public class MatchPrinter {
 
     public static void printSummary(MatchOutcome out, int winnerWinsTally) {
-        System.out.println();
         System.out.println(out.player1.getName() + "'s round scores were: " + formatArray(out.p1Totals));
         System.out.println(out.player2.getName() + "'s round scores were: " + formatArray(out.p2Totals));
         System.out.println(out.winner.getName() + " wins with a wins tally of: " + winnerWinsTally);
-        System.out.println();
     }
 
     private static String formatArray(int[] arr) {
